@@ -57,7 +57,53 @@ public class Marker {
      * Example: a = "ACGTAC", b = "TTACGT", k = 4: the words of a are ACGT, CGTA, GTAC; only ACGT is in b, so the answer is 1.
      */
     public static int sharedWords(String a, String b, int k) {
-        // TODO Mission 4
-        return -1;
+        return sharedWords(a, b, k, MOD);
+    }
+
+    static final long BASE = 131;
+    static final long MOD = 1_000_000_007L;
+
+    /** The same, with a chosen modulus. With a tiny modulus (for example 101) many different words get the same hash;
+     *  the answer must not change, because every hash hit is checked letter by letter. */
+    static int sharedWords(String a, String b, int k, long mod) {
+        if (k <= 0 || a.length() < k || b.length() < k) return 0;
+        long top = 1;                                   // BASE^(k-1) mod mod: the weight of the letter that leaves the window
+        for (int i = 1; i < k; i++) top = top * BASE % mod;
+
+        // the hash of every window of b, and where in b each hash occurs
+        Map<Long, List<Integer>> inB = new HashMap<>();
+        long h = 0;
+        for (int i = 0; i < k; i++) h = (h * BASE + b.charAt(i)) % mod;
+        inB.computeIfAbsent(h, x -> new ArrayList<>()).add(0);
+        for (int i = 1; i + k <= b.length(); i++) {
+            h = roll(h, b.charAt(i - 1), b.charAt(i + k - 1), top, mod);
+            inB.computeIfAbsent(h, x -> new ArrayList<>()).add(i);
+        }
+
+        // slide over a; on a hash hit compare the letters, because equal hashes do not prove equal words
+        int count = 0;
+        h = 0;
+        for (int i = 0; i < k; i++) h = (h * BASE + a.charAt(i)) % mod;
+        for (int i = 0; i + k <= a.length(); i++) {
+            if (i > 0) h = roll(h, a.charAt(i - 1), a.charAt(i + k - 1), top, mod);
+            List<Integer> candidates = inB.get(h);
+            if (candidates == null) continue;
+            for (int j : candidates) {
+                if (sameWord(a, i, b, j, k)) { count++; break; }   // count the position i once
+            }
+        }
+        return count;
+    }
+
+    /** The hash of the next window in O(1): remove the old first letter, shift by one place, add the new last letter. */
+    static long roll(long h, char out, char in, long top, long mod) {
+        h = (h - out * top % mod + mod) % mod;          // + mod keeps the number from going negative
+        return (h * BASE + in) % mod;
+    }
+
+    /** Letter-by-letter check that a[i..i+k-1] equals b[j..j+k-1]. */
+    static boolean sameWord(String a, int i, String b, int j, int k) {
+        for (int t = 0; t < k; t++) if (a.charAt(i + t) != b.charAt(j + t)) return false;
+        return true;
     }
 }
