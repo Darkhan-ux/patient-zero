@@ -11,8 +11,16 @@ public class Marker {
      * Example: p = "ACGAC" gives [0, 0, 0, 1, 2]. The last number is the "Border length" line.
      */
     public static int[] prefixFunction(String p) {
-        // TODO Mission 3a
-        return new int[p.length()];
+        int m = p.length();
+        int[] pi = new int[m];          // pi[0] = 0: a single letter has no proper border
+        int k = 0;                      // the length of the current border of p[0..i-1]
+        for (int i = 1; i < m; i++) {
+            // the border cannot grow with p[i]: fall back to the next shorter border
+            while (k > 0 && p.charAt(i) != p.charAt(k)) k = pi[k - 1];
+            if (p.charAt(i) == p.charAt(k)) k++;
+            pi[i] = k;
+        }
+        return pi;
     }
 
     /**
@@ -22,8 +30,22 @@ public class Marker {
      * the first one is "First hit" (-1 when there is none).
      */
     public static int[] findAll(String text, String p) {
-        // TODO Mission 3b
-        return new int[0];
+        int n = text.length(), m = p.length();
+        if (m == 0 || m > n) return new int[0];
+        int[] pi = prefixFunction(p);
+        int[] found = new int[n];       // there are at most n - m + 1 hits
+        int count = 0;
+        int k = 0;                      // how many letters of p are matched right now
+        for (int i = 0; i < n; i++) {   // i only moves forward: the text pointer never goes back
+            char c = text.charAt(i);
+            while (k > 0 && c != p.charAt(k)) k = pi[k - 1];   // mismatch: keep the longest border that still fits
+            if (c == p.charAt(k)) k++;
+            if (k == m) {               // full match ending at i
+                found[count++] = i - m + 1;
+                k = pi[m - 1];          // do not restart from 0: the next hit may overlap this one
+            }
+        }
+        return Arrays.copyOf(found, count);
     }
 
     /**
